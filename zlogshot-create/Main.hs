@@ -6,7 +6,7 @@ module Main where
 
 import           Data.Dependent.Sum
 import           Data.Maybe                               ( fromJust )
-import           Data.ZlogShot
+import           Data.Zlogshot
 import           Options.Applicative
 import           System.IO
 

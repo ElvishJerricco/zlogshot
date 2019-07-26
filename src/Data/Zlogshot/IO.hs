@@ -5,7 +5,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Data.ZlogShot.IO where
+module Data.Zlogshot.IO where
 
 import           Control.Concurrent.Async
 import           Control.Exception                        ( throwIO
@@ -18,7 +18,7 @@ import           Data.Dependent.Sum
 import           Data.Functor.Identity
 import           Data.List                                ( break )
 import           Data.Time
-import           Data.ZlogShot.Types
+import           Data.Zlogshot.Types
 import           System.Exit                              ( ExitCode(..) )
 import           System.IO
 import           System.Process

@@ -5,7 +5,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Data.ZlogShot.Types where
+module Data.Zlogshot.Types where
 
 import           Data.Some
 import           Text.Read                                ( readMaybe )

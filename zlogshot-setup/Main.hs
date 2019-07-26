@@ -4,7 +4,7 @@
 module Main where
 
 import           Data.Dependent.Sum
-import           Data.ZlogShot
+import           Data.Zlogshot
 import           Options.Applicative
 
 data Config = Config

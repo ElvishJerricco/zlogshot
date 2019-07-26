@@ -5,17 +5,17 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Data.ZlogShot
-  ( module Data.ZlogShot
-  , module Data.ZlogShot.Types
-  , module Data.ZlogShot.IO
+module Data.Zlogshot
+  ( module Data.Zlogshot
+  , module Data.Zlogshot.Types
+  , module Data.Zlogshot.IO
   )
 where
 
 import           Control.Monad
 import           Data.Dependent.Sum
-import           Data.ZlogShot.IO
-import           Data.ZlogShot.Types
+import           Data.Zlogshot.IO
+import           Data.Zlogshot.Types
 import           Graphics.Rendering.Chart.Backend.Diagrams
 import           Graphics.Rendering.Chart.Easy     hiding ( argument
                                                           , beside

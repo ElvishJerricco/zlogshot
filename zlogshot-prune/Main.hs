@@ -2,7 +2,7 @@ module Main where
 
 import           Control.Monad                            ( when )
 import           Data.Foldable                            ( for_ )
-import           Data.ZlogShot
+import           Data.Zlogshot
 import           Options.Applicative
 
 main :: IO ()
