@@ -8,8 +8,8 @@ import           Data.ZlogShot
 import           Options.Applicative
 
 data Config = Config
-  { srcDataset :: Dataset
-  , destDataset :: Dataset
+  { srcDataset :: FileSystem
+  , destDataset :: FileSystem
   , label :: String
   , coefficient :: Integer
   } deriving Show
@@ -20,7 +20,7 @@ main = do
 
   let gen = Generation 1
   backup <- newBackupName label gen
-  let snapshot = Snapshot {snapDataset = srcDataset, snapBackup = backup}
+  let snapshot = Snapshot {snapFileSystem = srcDataset, snapBackup = backup}
 
   makeExpiringSnapshot snapshot coefficient gen Recursive
   transfer TransferConfig
@@ -37,8 +37,8 @@ main = do
   opts = info (helper <*> argParser) $ mconcat
     [fullDesc, progDesc "", header "zlogshot-setup - Setup a zlogshot backup"]
   argParser = do
-    srcDataset  <- Dataset <$> argument str (metavar "<SOURCE DATASET>")
-    destDataset <- Dataset <$> argument str (metavar "<DETINATION DATASET>")
+    srcDataset  <- FileSystem <$> argument str (metavar "<SOURCE DATASET>")
+    destDataset <- FileSystem <$> argument str (metavar "<DETINATION DATASET>")
     label       <- strOption $ mconcat
       [ long "label"
       , short 'l'

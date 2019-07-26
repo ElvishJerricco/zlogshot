@@ -5,28 +5,35 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE PolyKinds #-}
-
 module Data.ZlogShot.Types where
 
 import           Data.Some
 import           Text.Read                                ( readMaybe )
 
-newtype Dataset = Dataset { unDataset :: String }
+class Dataset ds where
+  datasetName :: ds -> String
+
+-- Technically encompasses zvols as well
+newtype FileSystem = FileSystem { unFileSystem :: String }
   deriving Show
+
+instance Dataset FileSystem where
+  datasetName = unFileSystem
+
+data Snapshot = Snapshot
+  { snapFileSystem :: FileSystem
+  , snapBackup :: Backup
+  } deriving Show
+
+instance Dataset Snapshot where
+  datasetName snap =
+    datasetName (snapFileSystem snap) ++ "@" ++ unBackup (snapBackup snap)
 
 newtype Backup = Backup { unBackup :: String }
   deriving Show
 
 newtype Generation = Generation { unGeneration :: Integer }
   deriving (Show, Num)
-
-data Snapshot = Snapshot
-  { snapDataset :: Dataset
-  , snapBackup :: Backup
-  } deriving Show
 
 data SnapshotRange = SnapshotRange
   { source :: Maybe Backup
@@ -91,7 +98,3 @@ parsePropertyValue BackupExpiration  s = Generation <$> readMaybe s
 parsePropertyValue LatestBackup      s = Just $ Backup s
 parsePropertyValue CurrentGeneration s = Generation <$> readMaybe s
 parsePropertyValue MountPoint        s = Just s
-
-snapshotName :: Snapshot -> String
-snapshotName (Snapshot { snapDataset, snapBackup }) =
-  unDataset snapDataset ++ relativeSnapshotName snapBackup

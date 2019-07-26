@@ -29,10 +29,10 @@ makeSnapshot snap options sDepth =
     $  ["snapshot"]
     ++ (options >>= \(p :=> Identity v) -> ["-o", propertyAssignment p v])
     ++ (guard (sDepth == Recursive) >> ["-r"])
-    ++ [snapshotName snap]
+    ++ [datasetName snap]
 
 withCreateSendProcess
-  :: SnapshotRange -> SnapshotDepth -> ((Handle, ProcessHandle) -> IO a) -> IO a
+  :: SnapshotRange -> SnapshotDepth -> ((Handle, ProcessHandle) -> IO r) -> IO r
 withCreateSendProcess r d f = withCreateProcess (createSendProcess r d)
   $ \_ (Just outHandle) _ sendPH -> f (outHandle, sendPH)
 
@@ -42,28 +42,28 @@ createSendProcess (SnapshotRange { source, target }) sDepth =
   $  ["send"]
   ++ (guard (sDepth == Recursive) >> ["-R"])
   ++ maybe [] (\s -> ["-i", relativeSnapshotName s]) source
-  ++ [snapshotName target]
+  ++ [datasetName target]
   ) { std_out = CreatePipe
     , std_in  = NoStream
     }
 
 withCreateReceiveProcess
-  :: Dataset
+  :: FileSystem
   -> Handle
   -> [DSum Property Identity]
-  -> (ProcessHandle -> IO a)
-  -> IO a
+  -> (ProcessHandle -> IO r)
+  -> IO r
 withCreateReceiveProcess d h p f =
   withCreateProcess (createReceiveProcess d h p) $ \_ _ _ -> f
 
 createReceiveProcess
-  :: Dataset -> Handle -> [DSum Property Identity] -> CreateProcess
-createReceiveProcess (Dataset dataset) handle props =
+  :: FileSystem -> Handle -> [DSum Property Identity] -> CreateProcess
+createReceiveProcess dataset handle props =
   (proc
       "zfs"
       (  ["receive"]
       ++ (props >>= \(p :=> Identity v) -> ["-o", propertyAssignment p v])
-      ++ [dataset]
+      ++ [datasetName dataset]
       )
     )
     { std_in = UseHandle handle
@@ -73,7 +73,7 @@ data TransferConfig = TransferConfig
   { pipeRange :: SnapshotRange
   , pipeSnapshotDepth :: SnapshotDepth
   , pipeGeneration :: Generation
-  , pipeDestination :: Dataset
+  , pipeDestination :: FileSystem
   , pipeReceiveProperties :: [DSum Property Identity]
   }
 
@@ -96,26 +96,23 @@ transfer config = flip runContT return $ do
     ExitFailure _ -> throwIO TransferException
     ExitSuccess   -> return ()
 
-datasetOrSnapshotName :: Either Dataset Snapshot -> String
-datasetOrSnapshotName = either unDataset snapshotName
-
-zfsGet :: Either Dataset Snapshot -> Property a -> IO (Maybe a)
+zfsGet :: Dataset dsType => dsType -> Property a -> IO (Maybe a)
 zfsGet ds p = parsePropertyValue p . head . lines <$> readProcess
   "zfs"
-  ["get", "-H", "-o", "value", propertyName p, datasetOrSnapshotName ds]
+  ["get", "-H", "-o", "value", propertyName p, datasetName ds]
   ""
 
-zfsSet :: Either Dataset Snapshot -> [DSum Property Identity] -> IO ()
+zfsSet :: Dataset dsType => dsType -> [DSum Property Identity] -> IO ()
 zfsSet ds ps =
   callProcess "zfs"
     $  ["set"]
     ++ [ propertyAssignment p v | p :=> Identity v <- ps ]
-    ++ [datasetOrSnapshotName ds]
+    ++ [datasetName ds]
 
-doesDatasetExist :: Either Dataset Snapshot -> IO Bool
+doesDatasetExist :: Dataset dsType => dsType -> IO Bool
 doesDatasetExist ds = do
   code <-
-    withCreateProcess (proc "zfs" ["list", "-H", datasetOrSnapshotName ds])
+    withCreateProcess (proc "zfs" ["list", "-H", datasetName ds])
         { std_in  = NoStream
         , std_out = NoStream
         , std_err = NoStream
@@ -130,9 +127,9 @@ newBackupName label (Generation gen) = do
   t <- formatTime defaultTimeLocale "%FT%T" <$> getCurrentTime
   return $ Backup $ label ++ "-" ++ t ++ "-" ++ show gen
 
-zfsDestroy :: SnapshotDepth -> Either Dataset Snapshot -> IO ()
+zfsDestroy :: Dataset dsType => SnapshotDepth -> dsType -> IO ()
 zfsDestroy sDepth ds =
   callProcess "zfs"
     $  ["destroy"]
     ++ (guard (sDepth == Recursive) >> ["-R"])
-    ++ [datasetOrSnapshotName ds]
+    ++ [datasetName ds]

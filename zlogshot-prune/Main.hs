@@ -10,4 +10,4 @@ main = do
  where
   opts = info (helper <*> argParser) $ mconcat
     [fullDesc, progDesc "", header "zlogshot-prune - Prune a zlogshot backup"]
-  argParser = Dataset <$> argument str (metavar "<DETINATION DATASET>")
+  argParser = FileSystem <$> argument str (metavar "<DETINATION DATASET>")

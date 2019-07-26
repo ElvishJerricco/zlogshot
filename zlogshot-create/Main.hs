@@ -11,16 +11,16 @@ import           Options.Applicative
 import           System.IO
 
 data Config = Config
-  { srcDataset :: Dataset
-  , destDataset :: Dataset
+  { srcDataset :: FileSystem
+  , destDataset :: FileSystem
   , label :: String
   , coefficient :: Integer
   } deriving Show
 
-getMetadata :: Dataset -> IO (Backup, Generation)
+getMetadata :: FileSystem -> IO (Backup, Generation)
 getMetadata destDataset = do
-  b <- fromJust <$> zfsGet (Left destDataset) LatestBackup
-  g <- fromJust <$> zfsGet (Left destDataset) CurrentGeneration
+  b <- fromJust <$> zfsGet destDataset LatestBackup
+  g <- fromJust <$> zfsGet destDataset CurrentGeneration
   return (b, g)
 
 main :: IO ()
@@ -28,15 +28,16 @@ main = do
   Config { srcDataset, destDataset, label, coefficient } <- execParser opts
   hPutStrLn stderr
     $  "Backing up "
-    ++ unDataset srcDataset
+    ++ datasetName srcDataset
     ++ " to "
-    ++ unDataset destDataset
+    ++ datasetName destDataset
 
   (oldBackup, currentGen) <- getMetadata destDataset
 
   let newGen = currentGen + 1
   newBackup <- newBackupName label newGen
-  let newSnapshot = Snapshot {snapDataset = srcDataset, snapBackup = newBackup}
+  let newSnapshot =
+        Snapshot {snapFileSystem = srcDataset, snapBackup = newBackup}
 
   hPutStrLn stderr $ "Creating new generation " ++ show newBackup
 
@@ -54,16 +55,14 @@ main = do
 
   -- We don't keep the history on the source dataset. We only keep the
   -- old backup as an incremental source for the send operation.
-  zfsDestroy Recursive $ Right $ Snapshot
-    { snapDataset = srcDataset
-    , snapBackup  = oldBackup
-    }
+  zfsDestroy Recursive
+    $ Snapshot {snapFileSystem = srcDataset, snapBackup = oldBackup}
  where
   opts = info (helper <*> argParser) $ mconcat
     [fullDesc, progDesc "", header "zlogshot-create - Create a zlogshot backup"]
   argParser = do
-    srcDataset  <- Dataset <$> argument str (metavar "<SOURCE DATASET>")
-    destDataset <- Dataset <$> argument str (metavar "<DETINATION DATASET>")
+    srcDataset  <- FileSystem <$> argument str (metavar "<SOURCE DATASET>")
+    destDataset <- FileSystem <$> argument str (metavar "<DETINATION DATASET>")
     label       <- strOption $ mconcat
       [ long "label"
       , short 'l'
