@@ -33,7 +33,7 @@ newtype Backup = Backup { unBackup :: String }
   deriving Show
 
 newtype Generation = Generation { unGeneration :: Integer }
-  deriving (Show, Num)
+  deriving (Show, Eq, Ord, Num)
 
 data SnapshotRange = SnapshotRange
   { source :: Maybe Backup

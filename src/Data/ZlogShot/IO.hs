@@ -1,6 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -17,6 +16,7 @@ import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Cont
 import           Data.Dependent.Sum
 import           Data.Functor.Identity
+import           Data.List                                ( break )
 import           Data.Time
 import           Data.ZlogShot.Types
 import           System.Exit                              ( ExitCode(..) )
@@ -101,6 +101,24 @@ zfsGet ds p = parsePropertyValue p . head . lines <$> readProcess
   "zfs"
   ["get", "-H", "-o", "value", propertyName p, datasetName ds]
   ""
+
+zfsGetFromAllSnapshots
+  :: FileSystem -> Property a -> IO [(Snapshot, Maybe a)]
+zfsGetFromAllSnapshots ds p = do
+  traverse parseLine . lines =<< readProcess
+    "zfs"
+    (  ["get", "-H", "-o", "name,value", "-r", "-t", "snapshot", "-d", "1"]
+    ++ [propertyName p, datasetName ds]
+    )
+    ""
+ where
+  breakDrop f as = let (start, finish) = break f as in (start, drop 1 finish)
+  parseLine l = do
+    let (snapFull, val     ) = breakDrop (== '\t') l
+        (snapFS  , snapName) = breakDrop (== '@') snapFull
+        snap = Snapshot {snapFileSystem = ds, snapBackup = Backup snapName}
+    when (snapFS /= unFileSystem ds) (error "Impossible dataset mismatch")
+    return (snap, parsePropertyValue p val)
 
 zfsSet :: Dataset dsType => dsType -> [DSum Property Identity] -> IO ()
 zfsSet ds ps =
